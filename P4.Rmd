@@ -1,0 +1,30 @@
+---
+title: "Project 4"
+author: "Brad Harbans"
+date: "5/2/2021"
+output: html_document
+bibliography: ref.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+For this assignment we have given two sets of email messages. One set is known to be spam and another set is known to be "ham", a legitimate message. I have downloaded two files from the example corpus https://spamassassin.apache.org/old/publiccorpus/ [@old_publiccorpus_2004]. I have downloaded the files named `20021010_easy_ham.tar.bz2` and `20021010_spam.tar.bz2` containg sample ham and spam messages respectively. I have also made my chosen files available on (github)[]. 
+
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
