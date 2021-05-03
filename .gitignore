@@ -42,5 +42,5 @@ vignettes/*.pdf
 /*.DS_Store
 
 #Unzipped Corpus
-/corpus/spam
-/corpus/easy_ham
+/corpus/spam/*
+/corpus/easy_ham/*
