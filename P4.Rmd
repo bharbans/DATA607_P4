@@ -144,6 +144,90 @@ wordcloud( spamCorpus[spamIndex], min.freq = 200)
 
 ```
 
+## Model Using TidyModels Package{.tabset}
+
+
+### Load Tidymodel Package
+```{r message=FALSE}
+library(tidymodels)
+library(textrecipes)
+library(stopwords)
+library(naivebayes)
+library(discrim)
+```
+
+
+### Split Data
+
+I will begin by using the `rsample` package to split the data into a testing and training set.
+
+```{r}
+set.seed(123124) 
+
+combinedDataSetForModel <- combinedDataSet %>% 
+  select(`message-id`, body_plaintext, isSpam , originatingIP) %>% 
+  mutate(isSpam = factor(isSpam) )
+
+
+combinedDataSetSplit <- initial_split(combinedDataSetForModel, strata = "isSpam", p = 0.75)
+train_data <- training(combinedDataSetSplit)
+test_data <- testing(combinedDataSetSplit)
+```
+
+### Update Recipe
+This recipe will tokenize the body field, and will keep words that appear more than 100 times. 
+```{r}
+spam_rec <-
+  recipe(isSpam ~ . , data=train_data) %>% 
+  update_role("message-id",new_role = "ID") %>% 
+  step_tokenize(body_plaintext) %>%
+  step_stopwords(body_plaintext, keep = F) %>%
+  step_tokenfilter(body_plaintext, max_tokens = 500) %>% 
+  step_tfidf(body_plaintext) %>% 
+  prep(training = train_data)
+  
+```
+
+### Juice the Train Data and Bake the Test Data
+```{r}
+rec_train_data <- juice(spam_rec)
+rec_test_data <- bake(spam_rec, test_data)
+```
+
+### Create and Fit Model
+```{r}
+
+model <- naive_Bayes() %>% 
+  set_mode("classification") %>%
+  set_engine("naivebayes") %>% 
+  translate() %>% 
+  fit(isSpam ~ .,data = rec_train_data  )
+```
+
+### Verify Model Accuracy
+Please see the below confusion matrix for the model.
+```{r}
+testPred <- model %>% 
+  predict( rec_test_data ) %>% 
+  bind_cols(rec_test_data %>% select(isSpam))
+
+testPred %>%
+  conf_mat(isSpam, .pred_class) %>% 
+  autoplot()
+
+```
+
+
+Please find the accuracy for the test data below.
+```{r}
+testPred %>%
+  metrics(isSpam, .pred_class) %>%
+  filter(.metric == "accuracy") %>% 
+  select(-.estimator) %>% 
+  reactable()
+  
+```
+
 ## References
 
 
