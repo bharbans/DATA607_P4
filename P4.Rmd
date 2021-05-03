@@ -8,23 +8,141 @@ bibliography: ref.bib
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(SnowballC)
+library(rvest)
+library(wordcloud)
+library(reactable)
 ```
 
 ## Introduction
 
-For this assignment we have given two sets of email messages. One set is known to be spam and another set is known to be "ham", a legitimate message. I have downloaded two files from the example corpus https://spamassassin.apache.org/old/publiccorpus/ [@old_publiccorpus_2004]. I have downloaded the files named `20021010_easy_ham.tar.bz2` and `20021010_spam.tar.bz2` containg sample ham and spam messages respectively. I have also made my chosen files available on (github)[]. 
+For this assignment we have given two sets of email messages. One set is known to be spam and another set is known to be "ham", a legitimate message. I have downloaded two files from the example corpus https://spamassassin.apache.org/old/publiccorpus/ ^[@old_publiccorpus_2004]. I have downloaded the files named `20021010_easy_ham.tar.bz2` and `20021010_spam.tar.bz2` containg sample ham and spam messages respectively. I have also made my chosen files available on [github](https://github.com/bharbans/DATA607_P4/tree/main/corpus). 
 
+## Import Data  {.tabset}
 
-```{r cars}
-summary(cars)
+### Text Mining Package
+
+I will be using the `tm`, Text Mining Package, in R to import the spam and ham data sets and to do some analysis.
+
+```{r message=FALSE}
+library(tm)
 ```
 
-## Including Plots
+### Import Data from Files and Export to Data Frame
+The data sets have been imported as as `Corpus` objects. *N.B.* The relative paths listed below can be created by extracting the files above into folders labeled `spam` and `easy_ham`. I have converted these `Corpus` objects to data frames in order to manipulate the data.  
+```{r}
+spamCorpus <- Corpus(DirSource(directory = "corpus/spam", encoding = "ASCII"))
+hamCorpus <- Corpus(DirSource(directory = "corpus/easy_ham/",encoding = "ASCII"))
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+spam <- data.frame(text = sapply(spamCorpus, as.character), stringsAsFactors = FALSE)
+ham <- data.frame(text = sapply(hamCorpus, as.character), stringsAsFactors = FALSE)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+### Combine Data Sets and Perform Some Manipulation
+```{r}
+spam <- spam %>% 
+  rownames_to_column("message-id") %>% 
+  rename( message=text ) %>% 
+  mutate ( isSpam = 1)
+
+ham <- ham %>% 
+  rownames_to_column("message-id") %>% 
+  rename( message=text ) %>% 
+  mutate ( isSpam = 0)
+```
+
+The body of a mail message comes after the header and consists of everything that follows the first blank line. ^[@costales_2002]. As a result I will split the message column by a field containing two consecutive new line characters.
+```{r}
+combinedDataSet <- rbind(spam,ham) %>% 
+  separate(message,sep = "(\r\n|\r|\n)(\r\n|\r|\n)", into = c("headers","body"), extra = "merge")
+```
+
+I will now strip any HTML tags from the message, using a regular expression. 
+```{r}
+combinedDataSet <- combinedDataSet %>% 
+  mutate( body_plaintext = str_replace_all(body,"</?[^>]+>","") )
+
+```
+
+I would also like to look at the originating IP address from the header.
+```{r}
+
+
+```
+
+
+The data frame now looks like this:
+```{r}
+combinedDataSet %>% 
+  head(30) %>% 
+  reactable()
+```
+
+
+
+
+
+
+
+However, leaving `Corpus` objects has its advantages.  Please find a few examples of what can be done with the `tm` package below.
+
+List simple information about the corpus:
+```{r}
+spamCorpus 
+```
+
+I will perform some pre-processing on the raw data. I will first remove the header field names from both copora. They can be found on the [Internet Assigned Numbers Authority (IANA) website](https://www.iana.org/assignments/message-headers/message-headers.xhtml)for download^[@chet_2020]. 
+
+```{r warning=FALSE}
+headerFieldsCSV <- read_csv("https://www.iana.org/assignments/message-headers/perm-headers.csv")
+
+strip_html <- function(x) { html_text(x)}
+
+
+hamCorpus <- hamCorpus %>% 
+  tm_map(removeWords,headerFieldsCSV$`Header Field Name`) %>% 
+  tm_map(content_transformer(tolower)) %>% 
+  tm_map(removeNumbers) %>% 
+  tm_map(removePunctuation) %>% 
+  tm_map(stripWhitespace) %>% 
+  tm_map(removeWords, stopwords()) %>% 
+  tm_map(stemDocument) 
+  
+
+spamCorpus <- spamCorpus %>% 
+  tm_map(removeWords,headerFieldsCSV$`Header Field Name`) %>% 
+  tm_map(content_transformer(tolower))%>% 
+  tm_map(removeNumbers) %>% 
+  tm_map(removePunctuation) %>% 
+  tm_map(stripWhitespace) %>% 
+  tm_map(removeWords, stopwords()) %>% 
+  tm_map(stemDocument) 
+
+```
+An example of one document that has been stemmed, this requires the `SnowballC` package.
+```{r}
+writeLines(as.character(spamCorpus[[20]])) 
+```
+
+I will now create a `DocumentTermMatrix`. 
+```{r}
+spamDTM <- DocumentTermMatrix(spamCorpus) %>% removeSparseTerms(sparse = .50)
+hamDTM <-DocumentTermMatrix(hamCorpus) %>% removeSparseTerms(sparse = .50)
+
+```
+
+I will now create a word cloud containing the frequency of common words in the spam. 
+```{r}
+spamFreq <- freq <- colSums(as.matrix(spamDTM)) %>% 
+  sort(decreasing = TRUE)
+spamWords <- names(spamFreq)
+
+wordcloud(spamWords[1:20], spamFreq[1:20])
+
+```
+
+
+
+
+
