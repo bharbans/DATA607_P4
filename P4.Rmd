@@ -189,7 +189,7 @@ test_data <- testing(combinedDataSetSplit)
 ```
 
 ### Update Recipe
-This recipe will tokenize the body field, and will keep words that appear more than 100 times. 
+This recipe will tokenize the body field, and will keep words that appear more than 100 times. This recipe has been adapted from the following [post](https://juliasilge.com/blog/animal-crossing/)^[@silge_2020].
 ```{r}
 spam_rec <-
   recipe(isSpam ~ . , data=train_data) %>% 
