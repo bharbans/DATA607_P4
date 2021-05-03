@@ -29,6 +29,20 @@ I will be using the `tm`, Text Mining Package, in R to import the spam and ham d
 library(tm)
 ```
 
+### Download and Unzip Files
+
+```{r}
+hamURL <- 'https://spamassassin.apache.org/old/publiccorpus/20021010_easy_ham.tar.bz2'
+spamURL <- 'https://spamassassin.apache.org/old/publiccorpus/20021010_spam.tar.bz2'
+
+download.file(hamURL,"corpus/20021010_easy_ham.tar.bz2")
+download.file(spamURL,"corpus/20021010_spam.tar.bz2")
+
+untar("corpus/20021010_easy_ham.tar.bz2", exdir = "corpus/")
+untar("corpus/20021010_spam.tar.bz2", exdir = "corpus/")
+```
+
+
 ### Import Data from Files and Export to Data Frame
 The data sets have been imported as as `Corpus` objects. *N.B.* The relative paths listed below can be created by extracting the files above into folders labeled `spam` and `easy_ham`. I have converted these `Corpus` objects to data frames in order to manipulate the data.  
 ```{r}
@@ -180,6 +194,7 @@ This recipe will tokenize the body field, and will keep words that appear more t
 spam_rec <-
   recipe(isSpam ~ . , data=train_data) %>% 
   update_role("message-id",new_role = "ID") %>% 
+  step_naomit(all_predictors()) %>% 
   step_tokenize(body_plaintext) %>%
   step_stopwords(body_plaintext, keep = F) %>%
   step_tokenfilter(body_plaintext, max_tokens = 500) %>% 
@@ -197,7 +212,7 @@ rec_test_data <- bake(spam_rec, test_data)
 ### Create and Fit Model
 ```{r}
 
-model <- naive_Bayes() %>% 
+model <- naive_Bayes(Laplace = 1) %>% 
   set_mode("classification") %>%
   set_engine("naivebayes") %>% 
   translate() %>% 
