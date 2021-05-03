@@ -44,7 +44,7 @@ untar("corpus/20021010_spam.tar.bz2", exdir = "corpus/")
 
 
 ### Import Data from Files and Export to Data Frame
-The data sets have been imported as as `Corpus` objects. *N.B.* The relative paths listed below can be created by extracting the files above into folders labeled `spam` and `easy_ham`. I have converted these `Corpus` objects to data frames in order to manipulate the data.  
+The data sets have been imported as as `Corpus` objects. I have converted these `Corpus` objects to data frames in order to manipulate the data.  
 ```{r}
 spamCorpus <- Corpus(DirSource(directory = "corpus/spam", encoding = "ASCII"))
 hamCorpus <- Corpus(DirSource(directory = "corpus/easy_ham/",encoding = "ASCII"))
