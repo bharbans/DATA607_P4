@@ -31,7 +31,7 @@ library(tm)
 
 ### Download and Unzip Files
 
-```{r}
+```{r, eval=F}
 hamURL <- 'https://spamassassin.apache.org/old/publiccorpus/20021010_easy_ham.tar.bz2'
 spamURL <- 'https://spamassassin.apache.org/old/publiccorpus/20021010_spam.tar.bz2'
 
@@ -86,7 +86,7 @@ I would also like to look at the originating IP address from the header. Please 
 regex <-"\\b(?!(10)|(127)|192\\.168|172\\.(2[0-9]|1[6-9]|3[0-2]))[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}" 
 
 combinedDataSet <- combinedDataSet %>% 
-  mutate( originatingIP = str_extract(headers,regex))
+  mutate( originatingIP = str_extract(headers,regex) , classBSubnet = originatingIP )
 ```
 
 
@@ -242,6 +242,85 @@ testPred %>%
   reactable()
   
 ```
+
+## Classification Based on Orginiating IP{.tabset}
+
+### Obtaining IP information
+
+I obtained the following function from the following [blog](https://heuristically.wordpress.com/2013/05/20/geolocate-ip-addresses-in-r/) post^[@ziem_2013]. It is a simple recursive function that takes an IP address or a vector of IP addresses and returns data about them using a JSON API for [freegeoip.app](https://freegeoip.app/). 
+```{r}
+
+freegeoip <- function(ip, format = ifelse(length(ip)==1,'list','dataframe'))
+{
+    if (1 == length(ip))
+    {
+        # a single IP address
+        require(rjson)
+        url <- paste(c("https://freegeoip.app/json/", ip), collapse='')
+        ret <- fromJSON(readLines(url, warn=FALSE))
+        if (format == 'dataframe')
+            ret <- data.frame(t(unlist(ret)))
+        return(ret)
+    } else {
+        ret <- data.frame()
+        for (i in 1:length(ip))
+        {
+            r <- freegeoip(ip[i], format="dataframe")
+            ret <- rbind(ret, r)
+        }
+        return(ret)
+    }
+}   
+```
+
+There is a limitation as to the number of queries that can be run on the API, as such I have obtained the unique IPs from the data sets, and will pass this to the `freegeoip` function above. *N.B.* The sample data consists of data from the year 2002, the API is providing current information, since then the records may have changed.
+```{r,eval=F} 
+uniqueIPInfo <- combinedDataSet$originatingIP %>% unique() %>% na.omit() %>%  freegeoip()
+```
+
+I will now join the data with original data set.
+```{r}
+IPDataSet <- combinedDataSet %>% 
+  left_join(uniqueIPInfo, by=c("originatingIP" = "ip") ) %>% 
+  select( -headers, -body, -body_plaintext)
+
+```
+
+Preview of Resultant data set.
+```{r}
+IPDataSet %>% 
+  head(30) %>% 
+  reactable(wrap = F)
+```
+### Looking at the messages based on Country of Origin.
+
+```{r}
+countryDataSet <- IPDataSet %>% 
+  select(`message-id`,country_name, isSpam, originatingIP) %>% 
+  na.omit()
+
+countryDataSet %>%
+  head(50) %>% 
+  reactable(wrap=F)
+```
+
+### Split Dataset
+```{r}
+
+set.seed(12312)
+
+countryDataSetSplit <- initial_split(countryDataSet, strata = "isSpam", p = 0.75)
+train_data_country <- training(countryDataSetSplit)
+test_data_country <- testing(countryDataSetSplit)
+```
+
+
+```{r}
+#model2 %>% countryDataSet %>% 
+#  lm(isSpam~country_name, . ) 
+```
+
+
 
 ## References
 
