@@ -255,8 +255,8 @@ library(stopwords)
 library(naivebayes)
 library(discrim)
 library(janitor)
-library(spacyr)
-spacy_initialize()
+library(kernlab)
+
 ```
 
 
@@ -266,10 +266,10 @@ I will begin by using the `rsample` package to split the data into a testing and
 
 ```{r}
 combinedDataSetForModel <- IPDataSet %>%
-  mutate(isSpam = factor(isSpam), country_code = factor(country_code), city = factor(city) , country_name = factor(country_name), region_name = factor(region_name)) %>% 
-  dplyr::select(`message-id`, isSpam, body_plaintext, originatingIP, country_name, region_name, city, time_zone)
+  mutate(isSpam = factor(isSpam),  originatingIP = factor(originatingIP), country_name = factor(country_name) ,region_name = factor(region_name),city = factor(city), time_zone = factor(time_zone)  ) %>% 
+  dplyr::select(`message-id`, isSpam, body_plaintext, originatingIP, country_name, region_name, city, time_zone) 
 
-set.seed(123124) 
+set.seed(1234) 
 combinedDataSetSplit <- initial_split(combinedDataSetForModel, strata = "isSpam", p = 0.75)
 train_data <- training(combinedDataSetSplit)
 test_data <- testing(combinedDataSetSplit)
@@ -280,14 +280,14 @@ This recipe will tokenize the body field, and will keep words that appear more t
 ```{r}
 spam_rec <-
   recipe(isSpam ~ . , data=train_data) %>% 
-  update_role("message-id",new_role = "ID") %>% 
   step_naomit(all_predictors()) %>% 
-  step_clean_names(all_predictors()) %>% 
-  step_tokenize(all_predictors(),engine = "spacyr") %>%
+  update_role("message-id",new_role = "ID") %>% 
+  step_clean_names(body_plaintext) %>% 
+  step_tokenize(body_plaintext) %>%
   step_stopwords(body_plaintext, keep = F) %>%
-  step_lemma(body_plaintext) %>%
-  step_tokenfilter(body_plaintext, max_tokens = 500) %>% 
-  step_tfidf(all_predictors()) %>% 
+  step_stem(body_plaintext) %>% 
+  step_tokenfilter(body_plaintext, max_tokens = 100) %>% 
+  step_tfidf(body_plaintext) %>% 
   prep(training = train_data)
   
 ```
@@ -301,22 +301,22 @@ rec_test_data <- bake(spam_rec, test_data)
 ### Create and Fit Model
 ```{r}
 
-model <- naive_Bayes(Laplace = 1) %>% 
+model_nb <- naive_Bayes(Laplace = 1) %>% 
   set_mode("classification") %>%
   set_engine("naivebayes") %>% 
-  translate() %>% 
   fit(isSpam ~ .,data = rec_train_data  )
+
 ```
 
 ### Verify Model Accuracy
 Please see the below confusion matrix for the model.
 ```{r}
-testPred <- model %>% 
+testPred_nb <- model_nb %>% 
   predict( rec_test_data ) %>% 
   bind_cols(rec_test_data %>% 
               dplyr::select(isSpam))
 
-testPred %>%
+testPred_nb %>%
   conf_mat(isSpam, .pred_class) %>% 
   autoplot()
 
@@ -325,7 +325,7 @@ testPred %>%
 
 Please find the accuracy for the test data below.
 ```{r}
-testPred %>%
+testPred_nb %>%
   metrics(isSpam, .pred_class) %>%
   filter(.metric == "accuracy") %>% 
   dplyr::select(-.estimator) %>% 
