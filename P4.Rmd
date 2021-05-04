@@ -255,6 +255,8 @@ library(stopwords)
 library(naivebayes)
 library(discrim)
 library(janitor)
+library(spacyr)
+spacy_initialize()
 ```
 
 
@@ -280,11 +282,12 @@ spam_rec <-
   recipe(isSpam ~ . , data=train_data) %>% 
   update_role("message-id",new_role = "ID") %>% 
   step_naomit(all_predictors()) %>% 
-  step_clean_names(body_plaintext) %>% 
-  step_tokenize(body_plaintext) %>%
+  step_clean_names(all_predictors()) %>% 
+  step_tokenize(all_predictors(),engine = "spacyr") %>%
   step_stopwords(body_plaintext, keep = F) %>%
+  step_lemma(body_plaintext) %>%
   step_tokenfilter(body_plaintext, max_tokens = 500) %>% 
-  step_tfidf(body_plaintext) %>% 
+  step_tfidf(all_predictors()) %>% 
   prep(training = train_data)
   
 ```
