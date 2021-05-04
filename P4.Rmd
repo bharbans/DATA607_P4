@@ -321,10 +321,12 @@ hamByCountry <- countryDataSet %>%
 
 tab1(spamByCountry$region_name, sort.group = "decreasing", cum.percent = TRUE ,main = "Spam By Region Name" )
 tab1(hamByCountry$region_name, sort.group = "decreasing", cum.percent = TRUE ,main = "Ham By Region Name" )
+```
 
+### Summary Statistics for Country
+```{r}
 tab1(spamByCountry$country_name, sort.group = "decreasing", cum.percent = TRUE ,main = "Spam By Country" )
 tab1(hamByCountry$country_name, sort.group = "decreasing", cum.percent = TRUE ,main = "Ham By Country" )
-
 ```
 
 <!-- <!-- -->
