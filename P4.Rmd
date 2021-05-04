@@ -307,7 +307,7 @@ countryDataSet %>%
   reactable(wrap=F)
 ```
 
-### Summary Statistics
+### Summary Statistics for Region
 ```{r message=FALSE, warning=FALSE}
 library(epiDisplay)
 ```
@@ -315,11 +315,15 @@ library(epiDisplay)
 ```{r}
 spamByCountry <- countryDataSet %>% 
   filter(isSpam == 1)
+
 hamByCountry <- countryDataSet %>% 
-  filter(isSpam == 1)
+  filter(isSpam == 0)
 
 tab1(spamByCountry$region_name, sort.group = "decreasing", cum.percent = TRUE ,main = "Spam By Region Name" )
 tab1(hamByCountry$region_name, sort.group = "decreasing", cum.percent = TRUE ,main = "Ham By Region Name" )
+
+tab1(spamByCountry$country_name, sort.group = "decreasing", cum.percent = TRUE ,main = "Spam By Country" )
+tab1(hamByCountry$country_name, sort.group = "decreasing", cum.percent = TRUE ,main = "Ham By Country" )
 
 ```
 

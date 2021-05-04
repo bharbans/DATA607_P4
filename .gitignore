@@ -44,3 +44,6 @@ vignettes/*.pdf
 #Unzipped Corpus
 /corpus/spam/*
 /corpus/easy_ham/*
+
+#RPubs Stuff
+/rsconnect
