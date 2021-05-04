@@ -158,91 +158,6 @@ wordcloud( spamCorpus[spamIndex], min.freq = 200)
 
 ```
 
-## Model Using TidyModels Package{.tabset}
-
-
-### Load Tidymodel Package
-```{r message=FALSE}
-library(tidymodels)
-library(textrecipes)
-library(stopwords)
-library(naivebayes)
-library(discrim)
-```
-
-
-### Split Data
-
-I will begin by using the `rsample` package to split the data into a testing and training set.
-
-```{r}
-set.seed(123124) 
-
-combinedDataSetForModel <- combinedDataSet %>% 
-  select(`message-id`, body_plaintext, isSpam , originatingIP) %>% 
-  mutate(isSpam = factor(isSpam) )
-
-
-combinedDataSetSplit <- initial_split(combinedDataSetForModel, strata = "isSpam", p = 0.75)
-train_data <- training(combinedDataSetSplit)
-test_data <- testing(combinedDataSetSplit)
-```
-
-### Update Recipe
-This recipe will tokenize the body field, and will keep words that appear more than 100 times. This recipe has been adapted from the following [post](https://juliasilge.com/blog/animal-crossing/)^[@silge_2020].
-```{r}
-spam_rec <-
-  recipe(isSpam ~ . , data=train_data) %>% 
-  update_role("message-id",new_role = "ID") %>% 
-  step_naomit(all_predictors()) %>% 
-  step_tokenize(body_plaintext) %>%
-  step_stopwords(body_plaintext, keep = F) %>%
-  step_tokenfilter(body_plaintext, max_tokens = 500) %>% 
-  step_tfidf(body_plaintext) %>% 
-  prep(training = train_data)
-  
-```
-
-### Juice the Train Data and Bake the Test Data
-```{r}
-rec_train_data <- juice(spam_rec)
-rec_test_data <- bake(spam_rec, test_data)
-```
-
-### Create and Fit Model
-```{r}
-
-model <- naive_Bayes(Laplace = 1) %>% 
-  set_mode("classification") %>%
-  set_engine("naivebayes") %>% 
-  translate() %>% 
-  fit(isSpam ~ .,data = rec_train_data  )
-```
-
-### Verify Model Accuracy
-Please see the below confusion matrix for the model.
-```{r}
-testPred <- model %>% 
-  predict( rec_test_data ) %>% 
-  bind_cols(rec_test_data %>% select(isSpam))
-
-testPred %>%
-  conf_mat(isSpam, .pred_class) %>% 
-  autoplot()
-
-```
-
-
-Please find the accuracy for the test data below.
-```{r}
-testPred %>%
-  metrics(isSpam, .pred_class) %>%
-  filter(.metric == "accuracy") %>% 
-  select(-.estimator) %>% 
-  reactable()
-  
-```
-
 ## Looking at Originating IP Address{.tabset}
 
 ### Obtaining IP information
@@ -284,8 +199,7 @@ uniqueIPInfo <- combinedDataSet$originatingIP %>%
 I will now join the data with original data set.
 ```{r}
 IPDataSet <- combinedDataSet %>% 
-  left_join(uniqueIPInfo, by=c("originatingIP" = "ip") ) %>% 
-  select( -headers, -body, -body_plaintext)
+  left_join(uniqueIPInfo, by=c("originatingIP" = "ip") )
 
 ```
 
@@ -329,46 +243,93 @@ tab1(spamByCountry$country_name, sort.group = "decreasing", cum.percent = TRUE ,
 tab1(hamByCountry$country_name, sort.group = "decreasing", cum.percent = TRUE ,main = "Ham By Country" )
 ```
 
-<!-- <!-- -->
-<!-- ### Split Dataset -->
-<!-- ```{r} -->
 
-<!-- set.seed(12312) -->
-
-<!-- countryDataSetSplit <- initial_split(countryDataSet, strata = "isSpam", p = 0.75) -->
-<!-- train_data_country <- training(countryDataSetSplit) -->
-<!-- test_data_country <- testing(countryDataSetSplit) -->
-<!-- ``` -->
+## Model Using TidyModels Package{.tabset}
 
 
-<!-- ```{r} -->
-<!-- lm_model <- linear_reg() %>%  -->
-<!--             set_engine('lm') %>% # adds lm implementation of linear regression -->
-<!--             set_mode('regression') -->
-<!-- ``` -->
+### Load Tidymodel Package
+```{r message=FALSE}
+library(tidymodels)
+library(textrecipes)
+library(stopwords)
+library(naivebayes)
+library(discrim)
+library(janitor)
+```
 
-<!-- I had to re-level the factor for the test data as it contains countries that do not exist in the training data. These will be converted to `NA`. -->
-<!-- ```{r} -->
 
-<!-- #test_data_country$country_name <- factor(test_data_country$country_name,levels = levels(train_data_country$country_name))  -->
+### Split Data
 
-<!-- lm_fit <- lm_model %>%  -->
-<!--           fit(isSpam ~ . , data = train_data_country) -->
+I will begin by using the `rsample` package to split the data into a testing and training set.
 
-<!-- tidy(lm_fit) %>% reactable() -->
-<!-- ``` -->
+```{r}
+combinedDataSetForModel <- IPDataSet %>%
+  mutate(isSpam = factor(isSpam), country_code = factor(country_code), city = factor(city) , country_name = factor(country_name), region_name = factor(region_name)) %>% 
+  dplyr::select(`message-id`, isSpam, body_plaintext, originatingIP, country_name, region_name, city, time_zone)
 
-<!-- ```{r} -->
-<!-- testPred <- lm_fit %>%  -->
-<!--   predict( test_data_country) %>%  -->
-<!--   bind_cols(test_data_country %>% select(isSpam)) -->
+set.seed(123124) 
+combinedDataSetSplit <- initial_split(combinedDataSetForModel, strata = "isSpam", p = 0.75)
+train_data <- training(combinedDataSetSplit)
+test_data <- testing(combinedDataSetSplit)
+```
 
-<!-- #testPred %>% -->
-<!-- #  conf_mat(truth = isSpam, estimate =.pred ) %>%  -->
+### Update Recipe
+This recipe will tokenize the body field, and will keep words that appear more than 100 times. This recipe has been adapted from the following [post](https://juliasilge.com/blog/animal-crossing/)^[@silge_2020].
+```{r}
+spam_rec <-
+  recipe(isSpam ~ . , data=train_data) %>% 
+  update_role("message-id",new_role = "ID") %>% 
+  step_naomit(all_predictors()) %>% 
+  step_clean_names(body_plaintext) %>% 
+  step_tokenize(body_plaintext) %>%
+  step_stopwords(body_plaintext, keep = F) %>%
+  step_tokenfilter(body_plaintext, max_tokens = 500) %>% 
+  step_tfidf(body_plaintext) %>% 
+  prep(training = train_data)
+  
+```
 
-<!-- ``` -->
-<!-- --> -->
- 
+### Juice the Train Data and Bake the Test Data
+```{r}
+rec_train_data <- juice(spam_rec)
+rec_test_data <- bake(spam_rec, test_data)
+```
+
+### Create and Fit Model
+```{r}
+
+model <- naive_Bayes(Laplace = 1) %>% 
+  set_mode("classification") %>%
+  set_engine("naivebayes") %>% 
+  translate() %>% 
+  fit(isSpam ~ .,data = rec_train_data  )
+```
+
+### Verify Model Accuracy
+Please see the below confusion matrix for the model.
+```{r}
+testPred <- model %>% 
+  predict( rec_test_data ) %>% 
+  bind_cols(rec_test_data %>% 
+              dplyr::select(isSpam))
+
+testPred %>%
+  conf_mat(isSpam, .pred_class) %>% 
+  autoplot()
+
+```
+
+
+Please find the accuracy for the test data below.
+```{r}
+testPred %>%
+  metrics(isSpam, .pred_class) %>%
+  filter(.metric == "accuracy") %>% 
+  dplyr::select(-.estimator) %>% 
+  reactable()
+  
+```
+
 
 
 ## References
