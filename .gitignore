@@ -47,4 +47,4 @@ vignettes/*.pdf
 
 #RPubs Stuff
 /rsconnect/documents/P4.Rmd/rpubs.com/rpubs/*
-/rsconnect/documents/**
+/rsconnect/
