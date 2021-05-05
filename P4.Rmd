@@ -21,14 +21,6 @@ For this assignment we have given two sets of email messages. One set is known t
 
 ## Import Data  {.tabset}
 
-### Text Mining Package
-
-I will be using the `tm`, Text Mining Package, in R to import the spam and ham data sets and to do some analysis.
-
-```{r message=FALSE}
-library(tm)
-```
-
 ### Download and Unzip Files
 
 ```{r, eval=F}
@@ -42,6 +34,13 @@ untar("corpus/20021010_easy_ham.tar.bz2", exdir = "corpus/")
 untar("corpus/20021010_spam.tar.bz2", exdir = "corpus/")
 ```
 
+### Text Mining Package
+
+I will be using the `tm`, Text Mining Package, in R to import the spam and ham data sets and to do some analysis.
+
+```{r message=FALSE}
+library(tm)
+```
 
 ### Import Data from Files and Export to Data Frame
 The data sets have been imported as as `Corpus` objects. I have converted these `Corpus` objects to data frames in order to manipulate the data.  
@@ -139,7 +138,7 @@ writeLines(as.character(spamCorpus[[20]]))
 ### Create Document Matrix
 I will now create a `DocumentTermMatrix`. 
 ```{r}
-spamDTM <- DocumentTermMatrix(spamCorpus) %>% removeSparseTerms(sparse = .2)
+spamDTM <- DocumentTermMatrix(spamCorpus) %>% removeSparseTerms(sparse = .99)
 
 ```
 
@@ -213,7 +212,7 @@ IPDataSet %>%
 
 ```{r}
 countryDataSet <- IPDataSet %>% 
-  select(-`message-id`,country_name, isSpam, originatingIP) %>% 
+  dplyr::select(-`message-id`,country_name, isSpam, originatingIP) %>% 
   na.omit()
 
 countryDataSet %>%
@@ -237,10 +236,16 @@ tab1(spamByCountry$region_name, sort.group = "decreasing", cum.percent = TRUE ,m
 tab1(hamByCountry$region_name, sort.group = "decreasing", cum.percent = TRUE ,main = "Ham By Region Name" )
 ```
 
-### Summary Statistics for Country
+### Summary Statistics for Country (1)
 ```{r}
 tab1(spamByCountry$country_name, sort.group = "decreasing", cum.percent = TRUE ,main = "Spam By Country" )
 tab1(hamByCountry$country_name, sort.group = "decreasing", cum.percent = TRUE ,main = "Ham By Country" )
+```
+
+
+### Summary Statistics for Country (2)
+```{r}
+tabpct(countryDataSet$country_code,countryDataSet$isSpam , xlab = "Country Code", ylab = "isSpam" , main = "Spam by Country")
 ```
 
 

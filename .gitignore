@@ -47,3 +47,4 @@ vignettes/*.pdf
 
 #RPubs Stuff
 /rsconnect
+/rsconnect/*
