@@ -46,5 +46,5 @@ vignettes/*.pdf
 /corpus/easy_ham/*
 
 #RPubs Stuff
-/rsconnect/
+/rsconnect/documents/P4.Rmd/rpubs.com/rpubs/*
 /rsconnect/documents/**
